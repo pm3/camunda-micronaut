@@ -15,6 +15,7 @@ import io.micronaut.inject.BeanDefinition;
 import io.micronaut.inject.ExecutableMethod;
 import io.micronaut.inject.MethodExecutionHandle;
 import io.micronaut.messaging.annotation.MessageHeader;
+import org.camunda.rest.api.ExecutionApi;
 import org.camunda.rest.api.ExternalTaskApi;
 import org.camunda.rest.api.ProcessInstanceApi;
 import org.camunda.rest.model.CompleteExternalTaskDto;
@@ -37,6 +38,7 @@ public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> 
     ExecutionHandleLocator executionHandleLocator;
     ExternalTaskApi externalTaskApi;
     ProcessInstanceApi processInstanceApi;
+    ExecutionApi executionApi;
     ObjectMapper objectMapper;
     String groupId;
 
@@ -50,6 +52,7 @@ public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> 
                                 IResponseBuilderFactory[] responseBuilderFactories,
                                 ExternalTaskApi externalTaskApi,
                                 ProcessInstanceApi processInstanceApi,
+                                ExecutionApi executionApi,
                                 ObjectMapper objectMapper,
                                 @Value("${external-task-group-id}") String groupId) {
         this.executionHandleLocator = executionHandleLocator;
@@ -57,6 +60,7 @@ public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> 
         this.responseBuilderFactories = responseBuilderFactories;
         this.externalTaskApi = externalTaskApi;
         this.processInstanceApi = processInstanceApi;
+        this.executionApi = executionApi;
         this.objectMapper = objectMapper;
         this.groupId = groupId;
     }
@@ -86,9 +90,15 @@ public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> 
 
             try {
                 Map<String, VariableValueDto> values = new HashMap<>();
-                if (executor.needVariables()) {
-                    values = processInstanceApi.getProcessInstanceVariables(externalTaskKafka.getProcessInstanceId(), true).block();
-                    LOGGER.info("values {} {}", externalTaskKafka.getExternalTaskId(), objectMapper.writeValueAsString(values));
+                if (executor.isProcessVariables()) {
+                    Map<String, VariableValueDto> m = processInstanceApi.getProcessInstanceVariables(externalTaskKafka.getProcessInstanceId(), true).block();
+                    values.putAll(m);
+                    LOGGER.info("process values {} {}", externalTaskKafka.getExternalTaskId(), objectMapper.writeValueAsString(values));
+                }
+                if (executor.isLocalVariables() && externalTaskKafka.getExecutionId() != null) {
+                    Map<String, VariableValueDto> m = executionApi.getLocalExecutionVariables(externalTaskKafka.getExecutionId(), true).block();
+                    values.putAll(m);
+                    LOGGER.info("local values {} {}", externalTaskKafka.getExternalTaskId(), objectMapper.writeValueAsString(values));
                 }
 
                 Map<String, VariableValueDto> response = executor.exec(externalTaskKafka, values);

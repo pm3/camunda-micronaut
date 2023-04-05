@@ -2,6 +2,7 @@ package com.aston.camunda.externaltask;
 
 public class ExternalTaskKafka {
     String externalTaskId;
+    String executionId;
     String topicName;
     String priority;
     String processInstanceId;
@@ -14,6 +15,14 @@ public class ExternalTaskKafka {
 
     public void setExternalTaskId(String externalTaskId) {
         this.externalTaskId = externalTaskId;
+    }
+
+    public String getExecutionId() {
+        return executionId;
+    }
+
+    public void setExecutionId(String executionId) {
+        this.executionId = executionId;
     }
 
     public String getTopicName() {

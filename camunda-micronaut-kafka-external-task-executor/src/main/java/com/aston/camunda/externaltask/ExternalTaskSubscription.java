@@ -10,4 +10,8 @@ public @interface ExternalTaskSubscription {
     String topic();
 
     long timeout() default 10_000;
+
+    boolean localVariables() default false;
+
+    boolean processVariables() default false;
 }

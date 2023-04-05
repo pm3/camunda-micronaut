@@ -7,11 +7,6 @@ import java.util.Map;
 
 public class NullArgumentBuilder implements IArgumentBuilder {
     @Override
-    public boolean needVariables() {
-        return false;
-    }
-
-    @Override
     public Object build(ExternalTaskKafka externalTask, Map<String, VariableValueDto> variables) {
         return null;
     }

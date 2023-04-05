@@ -22,7 +22,8 @@ public class ExternalTaskExecutor {
     IResponseBuilder responseBuilder;
     private String topic;
     private long timeout;
-    private boolean needVariables;
+    private boolean localVariables;
+    private boolean processVariables;
 
     public ExternalTaskExecutor(ExecutableMethod<?, ?> method,
                                 MethodExecutionHandle<?, Object> executionHandle,
@@ -32,7 +33,6 @@ public class ExternalTaskExecutor {
         this.executionHandle = executionHandle;
         initAnnotationProperties(method);
         initArgumentBuilders(method, argumentBuilderFactories);
-        initNeedVariables();
         initResponseBuilder(method, responseBuilderFactories);
     }
 
@@ -40,6 +40,8 @@ public class ExternalTaskExecutor {
         AnnotationValue<?> a = method.getAnnotation(ExternalTaskSubscription.class);
         this.topic = a.stringValue("topic").get();
         this.timeout = a.longValue("timeout").orElse(10_000);
+        this.localVariables = a.booleanValue("localVariables").orElse(false);
+        this.processVariables = a.booleanValue("processVariables").orElse(false);
     }
 
     private void initArgumentBuilders(ExecutableMethod<?, ?> method, IArgumentBuilderFactory[] argumentBuilderFactories) {
@@ -58,13 +60,6 @@ public class ExternalTaskExecutor {
         }
     }
 
-    private void initNeedVariables() {
-        this.needVariables = false;
-        for (IArgumentBuilder builder : builders) {
-            if (builder.needVariables()) this.needVariables = true;
-        }
-    }
-
     private void initResponseBuilder(ExecutableMethod<?, ?> method, IResponseBuilderFactory[] responseBuilderFactories) {
         for (IResponseBuilderFactory factory : responseBuilderFactories) {
             this.responseBuilder = factory.create(method);
@@ -80,8 +75,12 @@ public class ExternalTaskExecutor {
         return timeout;
     }
 
-    public boolean needVariables() {
-        return needVariables;
+    public boolean isLocalVariables() {
+        return localVariables;
+    }
+
+    public boolean isProcessVariables() {
+        return processVariables;
     }
 
     public Map<String, VariableValueDto> exec(ExternalTaskKafka externalTask, Map<String, VariableValueDto> variables) throws Exception {

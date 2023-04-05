@@ -23,12 +23,7 @@ public class VariablesArgumentBuilder implements IArgumentBuilder {
         this.objectMapper = objectMapper;
         this.externalTaskGetters = externalTaskGetters;
     }
-
-    @Override
-    public boolean needVariables() {
-        return true;
-    }
-
+    
     @Override
     public Object build(ExternalTaskKafka externalTask, Map<String, VariableValueDto> variables) throws Exception {
         ObjectNode root = objectMapper.createObjectNode();
