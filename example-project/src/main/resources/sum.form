@@ -1,0 +1,33 @@
+{
+  "components": [
+    {
+      "label": "a",
+      "type": "number",
+      "id": "Field_0jk9jzv",
+      "key": "a",
+      "disabled": true
+    },
+    {
+      "label": "b",
+      "type": "number",
+      "id": "Field_0r520nk",
+      "key": "b",
+      "disabled": true
+    },
+    {
+      "label": "c",
+      "type": "number",
+      "id": "Field_0b0urvw",
+      "key": "c"
+    }
+  ],
+  "type": "default",
+  "id": "pm_sum",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.8.0"
+  },
+  "executionPlatform": "Camunda Platform",
+  "executionPlatformVersion": "7.18.0",
+  "schemaVersion": 7
+}

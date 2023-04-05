@@ -1,0 +1,19 @@
+micronaut:
+  application:
+    name: demo
+netty:
+  default:
+    allocator:
+      max-order: 3
+
+kafka:
+  bootstrap:
+    servers: 192.168.100.20:9092
+
+logger:
+  levels:
+    io.micronaut.http.client: DEBUG
+
+
+openapi-micronaut-client-base-path: https://camunda.astondev.sk/engine-rest
+external-task-group-id: pm-app
