@@ -1,19 +1,12 @@
 package com.aston.camunda.externaltask;
 
-import com.aston.camunda.externaltask.args.IArgumentBuilderFactory;
-import com.aston.camunda.externaltask.args.IResponseBuilderFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micronaut.configuration.kafka.annotation.KafkaListener;
 import io.micronaut.configuration.kafka.annotation.OffsetReset;
 import io.micronaut.configuration.kafka.annotation.Topic;
-import io.micronaut.context.ExecutionHandleLocator;
 import io.micronaut.context.annotation.Value;
-import io.micronaut.context.processor.ExecutableMethodProcessor;
 import io.micronaut.core.annotation.Nullable;
 import io.micronaut.http.client.exceptions.HttpClientResponseException;
-import io.micronaut.inject.BeanDefinition;
-import io.micronaut.inject.ExecutableMethod;
-import io.micronaut.inject.MethodExecutionHandle;
 import io.micronaut.messaging.annotation.MessageHeader;
 import org.camunda.rest.api.ExecutionApi;
 import org.camunda.rest.api.ExternalTaskApi;
@@ -31,33 +24,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @KafkaListener(offsetReset = OffsetReset.EARLIEST, groupId = "${external-task-group-id}")
-public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> {
+public class ExternalTaskConsumer {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(ExternalTaskConsumer.class);
 
-    ExecutionHandleLocator executionHandleLocator;
     ExternalTaskApi externalTaskApi;
     ProcessInstanceApi processInstanceApi;
     ExecutionApi executionApi;
     ObjectMapper objectMapper;
     String groupId;
 
-    IArgumentBuilderFactory[] argumentBuilderFactories;
-
-    IResponseBuilderFactory[] responseBuilderFactories;
     Map<String, ExternalTaskExecutor> methods = new ConcurrentHashMap<>();
 
-    public ExternalTaskConsumer(ExecutionHandleLocator executionHandleLocator,
-                                IArgumentBuilderFactory[] argumentBuilderFactories,
-                                IResponseBuilderFactory[] responseBuilderFactories,
-                                ExternalTaskApi externalTaskApi,
+    public ExternalTaskConsumer(ExternalTaskApi externalTaskApi,
                                 ProcessInstanceApi processInstanceApi,
                                 ExecutionApi executionApi,
                                 ObjectMapper objectMapper,
                                 @Value("${external-task-group-id}") String groupId) {
-        this.executionHandleLocator = executionHandleLocator;
-        this.argumentBuilderFactories = argumentBuilderFactories;
-        this.responseBuilderFactories = responseBuilderFactories;
         this.externalTaskApi = externalTaskApi;
         this.processInstanceApi = processInstanceApi;
         this.executionApi = executionApi;
@@ -137,15 +120,6 @@ public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> 
         }
     }
 
-    @Override
-    public void process(BeanDefinition<?> beanDefinition, ExecutableMethod<?, ?> method) {
-        if (method.hasAnnotation(ExternalTaskSubscription.class)) {
-            MethodExecutionHandle<?, Object> executionHandle = executionHandleLocator.createExecutionHandle(beanDefinition, (ExecutableMethod<Object, ?>) method);
-            ExternalTaskExecutor executor = new ExternalTaskExecutor(method, executionHandle, argumentBuilderFactories, responseBuilderFactories);
-            addExecutor(executor);
-        }
-    }
-
     public void addExecutor(ExternalTaskExecutor externalTaskExecutor) {
         if (methods.containsKey(externalTaskExecutor.getTopic())) {
             LOGGER.warn("ignore duplicated topic {}", externalTaskExecutor);
@@ -154,5 +128,4 @@ public class ExternalTaskConsumer implements ExecutableMethodProcessor<Camunda> 
         LOGGER.info("register topic {}", externalTaskExecutor.getTopic());
         methods.put(externalTaskExecutor.getTopic(), externalTaskExecutor);
     }
-
 }
