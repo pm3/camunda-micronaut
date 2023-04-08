@@ -32,7 +32,7 @@ public class ProcessController {
     }
 
     @Post("/verify")
-    @ExternalTaskSubscription(topic = "/pm/verify")
+    @ExternalTaskSubscription(topic = "/pm/verify", processVariables = true)
     public void verify(@Body PmProcessData data) {
         LOGGER.info("verify {}", data);
         if (data.getA() != null && data.getB() != null && data.getC() != null && data.getA() + data.getB() == data.getC()) {
@@ -43,7 +43,7 @@ public class ProcessController {
     }
 
     @Post("/counter")
-    @ExternalTaskSubscription(topic = "/pm/counter")
+    @ExternalTaskSubscription(topic = "/pm/counter", processVariables = true)
     public PmProcessData counter(@Body PmProcessData data) {
         LOGGER.info("counter {}", data);
         PmProcessData data2 = new PmProcessData();
