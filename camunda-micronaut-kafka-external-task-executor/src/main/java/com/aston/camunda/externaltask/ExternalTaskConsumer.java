@@ -67,8 +67,22 @@ public class ExternalTaskConsumer {
                 externalTaskApi.lock(externalTaskKafka.getExternalTaskId(), lock).block();
                 LOGGER.info("locking {}", externalTaskKafka.getExternalTaskId());
             } catch (HttpClientResponseException e) {
-                LOGGER.info("ignore, locked or completed {}", externalTaskKafka.getExternalTaskId());
-                return;
+                if (e.getStatus().getCode() != 404) {
+                    LOGGER.info("ignore, locked or completed {}", externalTaskKafka.getExternalTaskId());
+                    return;
+                }
+                Thread.sleep(100);
+                LOGGER.info("re-lock 404 {}", externalTaskKafka.getExternalTaskId());
+                try {
+                    LockExternalTaskDto lock = new LockExternalTaskDto();
+                    lock.setLockDuration(executor.getTimeout());
+                    lock.setWorkerId(groupId);
+                    externalTaskApi.lock(externalTaskKafka.getExternalTaskId(), lock).block();
+                    LOGGER.info("locking {}", externalTaskKafka.getExternalTaskId());
+                } catch (HttpClientResponseException e2) {
+                    LOGGER.info("ignore, locked or completed {}", externalTaskKafka.getExternalTaskId());
+                    return;
+                }
             }
 
             try {
