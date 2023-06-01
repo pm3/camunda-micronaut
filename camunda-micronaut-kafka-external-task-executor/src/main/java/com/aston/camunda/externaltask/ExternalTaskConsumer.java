@@ -11,10 +11,7 @@ import io.micronaut.messaging.annotation.MessageHeader;
 import org.camunda.rest.api.ExecutionApi;
 import org.camunda.rest.api.ExternalTaskApi;
 import org.camunda.rest.api.ProcessInstanceApi;
-import org.camunda.rest.model.CompleteExternalTaskDto;
-import org.camunda.rest.model.ExternalTaskFailureDto;
-import org.camunda.rest.model.LockExternalTaskDto;
-import org.camunda.rest.model.VariableValueDto;
+import org.camunda.rest.model.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,12 +86,12 @@ public class ExternalTaskConsumer {
                 Map<String, VariableValueDto> values = new HashMap<>();
                 if (executor.isProcessVariables()) {
                     Map<String, VariableValueDto> m = processInstanceApi.getProcessInstanceVariables(externalTaskKafka.getProcessInstanceId(), true).block();
-                    values.putAll(m);
+                    if (m != null) values.putAll(m);
                     LOGGER.info("process values {} {}", externalTaskKafka.getExternalTaskId(), objectMapper.writeValueAsString(values));
                 }
                 if (executor.isLocalVariables() && externalTaskKafka.getExecutionId() != null) {
                     Map<String, VariableValueDto> m = executionApi.getLocalExecutionVariables(externalTaskKafka.getExecutionId(), true).block();
-                    values.putAll(m);
+                    if (m != null) values.putAll(m);
                     LOGGER.info("local values {} {}", externalTaskKafka.getExternalTaskId(), objectMapper.writeValueAsString(values));
                 }
 
@@ -110,8 +107,28 @@ public class ExternalTaskConsumer {
                 externalTaskApi.completeExternalTaskResource(externalTaskKafka.getExternalTaskId(), complete).block();
                 LOGGER.info("completed {} {}", externalTaskKafka.getExternalTaskId(), objectMapper.writeValueAsString(complete));
 
+            } catch (BpmnException e) {
+                LOGGER.error("execute bpmn error {} {}", externalTaskKafka.getExternalTaskId(), e.getMessage(), e);
+                ExternalTaskBpmnError bpmnError = new ExternalTaskBpmnError();
+                bpmnError.setWorkerId(groupId);
+                bpmnError.setErrorCode(e.getCode());
+                bpmnError.setErrorMessage(e.getMessage());
+                externalTaskApi.handleExternalTaskBpmnError(externalTaskKafka.getExternalTaskId(), bpmnError).block();
+            } catch (RetryFailureException e) {
+                int retries = e.getMaxRetry();
+                if (externalTaskKafka.getRetries() != null) {
+                    retries = externalTaskKafka.getRetries() - 1;
+                    if (retries < 0) retries = 0;
+                }
+                LOGGER.error("execute retry error {} retries {} {}", externalTaskKafka.getExternalTaskId(), retries, e.getMessage(), e);
+                ExternalTaskFailureDto failure = new ExternalTaskFailureDto();
+                failure.setWorkerId(groupId);
+                failure.setErrorMessage(e.getMessage());
+                failure.setRetries(retries);
+                failure.setRetryTimeout(e.getRetryTimeout() > 0 ? e.getRetryTimeout() : 15_000L);
+                externalTaskApi.handleFailure(externalTaskKafka.getExternalTaskId(), failure).block();
             } catch (Exception e) {
-                LOGGER.error("execute error {} {}", externalTaskKafka.getExternalTaskId(), e.getMessage(), e);
+                LOGGER.error("execute technical error {} {}", externalTaskKafka.getExternalTaskId(), e.getMessage(), e);
                 ExternalTaskFailureDto failure = new ExternalTaskFailureDto();
                 failure.setWorkerId(groupId);
                 failure.setErrorMessage(e.getMessage());
@@ -127,7 +144,7 @@ public class ExternalTaskConsumer {
             VariableValueDto var2 = values.get(key);
             if (var2 != null) {
                 VariableValueDto var1 = response.get(key);
-                if (var1.getValue().equals(var2.getValue())) {
+                if (var1 != null && var1.getValue() != null && var1.getValue().equals(var2.getValue())) {
                     response.remove(key);
                 }
             }

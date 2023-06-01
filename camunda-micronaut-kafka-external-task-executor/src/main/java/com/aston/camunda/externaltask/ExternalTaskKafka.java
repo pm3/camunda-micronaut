@@ -8,6 +8,7 @@ public class ExternalTaskKafka {
     String processInstanceId;
     String processDefinitionKey;
     String activityId;
+    Integer retries;
 
     public String getExternalTaskId() {
         return externalTaskId;
@@ -63,5 +64,13 @@ public class ExternalTaskKafka {
 
     public void setActivityId(String activityId) {
         this.activityId = activityId;
+    }
+
+    public Integer getRetries() {
+        return retries;
+    }
+
+    public void setRetries(Integer retries) {
+        this.retries = retries;
     }
 }
