@@ -1,7 +1,9 @@
 package com.aston.camunda.process;
 
+import com.aston.camunda.externaltask.BpmnException;
 import com.aston.camunda.externaltask.Camunda;
 import com.aston.camunda.externaltask.ExternalTaskSubscription;
+import com.aston.camunda.externaltask.RetryFailureException;
 import io.micronaut.http.annotation.Body;
 import io.micronaut.http.annotation.Controller;
 import io.micronaut.http.annotation.Get;
@@ -33,12 +35,19 @@ public class ProcessController {
 
     @Post("/verify")
     @ExternalTaskSubscription(topic = "/pm/verify", processVariables = true)
-    public void verify(@Body PmProcessData data) {
+    public void verify(@Body PmProcessData data) throws BpmnException, RetryFailureException {
         LOGGER.info("verify {}", data);
+        if (data.getC() == 333) {
+            throw new RetryFailureException(3, 60_000L, "fatal error 666");
+        }
+        if (data.getC() == 666) {
+            throw new RuntimeException("fatal error 666");
+        }
         if (data.getA() != null && data.getB() != null && data.getC() != null && data.getA() + data.getB() == data.getC()) {
             LOGGER.info("ok {}+{}={}", data.getA(), data.getB(), data.getC());
         } else {
             LOGGER.info("no ok {}+{}={}", data.getA(), data.getB(), data.getC());
+            throw new BpmnException("e11", "no ok " + data.getA() + "+" + data.getB() + "!=" + data.getC());
         }
     }
 
